@@ -1,3 +1,4 @@
+# First attempt at scraping Anilist final result is in AnilistScraper.py
 from bs4 import BeautifulSoup
 import requests, openpyxl
 
