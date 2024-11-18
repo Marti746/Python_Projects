@@ -18,13 +18,13 @@ def getList():
                'Vayne','Akshan','Quinn','Rengar','Ornn','Vladmir','Warwick','Udyr','Maokai',
                'Gnar','Tahm Kench','RTyze','Gragas','Shen','Sylas','Pantheon','LeBlanc','Akali',
                'Dr. Mundo','Irelia','Cho Gath','Camille','Gangplank','Yone','Olaf','Sett','Yorick',
-               'Volibear','Sion','KSante','Jayce','Darius','Garen','Renekton','Illaoi']
+               'Volibear','Sion','KSante','Jayce','Darius','Garen','Renekton','Illaoi', 'Ambessa']
     jgList = ['Evelynn','Graves','Rengar','Master Yi','Briar','Bel Veth','Lee Sin','Lillia',
               'Xin Zhao','Jax','Rammus','Ekko','Ivern','Kindred','Brand','Viego','Rek Sai',
               'Elise','Vi','Trundle','Gwen','Poppy','Nocturne','Warwick','Kha Zix','Nunu',
               'Maokai','Udyr','Talon','Hecarim','Wukong','Taliyah','Fiddlesticks','Sejuani',
               'Shyvana','Nidalee','Amumu','Diana','Gragas','Zac','Jarvan IV','Shaco','Sylas',
-              'Kayn','Karthus']
+              'Kayn','Karthus', 'Ambessa']
     midList = ['Tahm Kench','Neeko','Ahri','Annie','Talon','Camille','Anivia','Katarina',
                'Cassiopia','Fizz','Irelia','LeBlanc','Malzahar','Kassadin','Zed','Sett',
                'Annie','Akali','Yone','Ekko','Twisted Fate','Vladmir','Akshan','Zoe','Sylas',
