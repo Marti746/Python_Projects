@@ -3,7 +3,7 @@ My Repo for all things Python Projects. A place to store my Projects folder, to 
 
 Navigation of the Repo
 
-# Apps
+# Apps[Apps](https://github.com/Marti746/Python_Projects/tree/main/Apps)
 Within this folder are applications created within Python, with APIs and GUI interfaces. This is a place to try out app development and test security postures on Apps as well.
 With more exciting scripts to come!
 
