@@ -33,6 +33,34 @@ def get_advice():
     except Exception as e:
         return f"Error: {e}"
 
+def get_cocktail():
+    url = "https://www.thecocktaildb.com/api/json/v1/1/random.php"
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+        if data['drinks']:
+            drink = data['drinks'][0]
+            name = drink['strDrink']
+            instructions = drink['strInstructions']
+            # Gather ingredients and measures
+            ingredients = []
+            for i in range(1, 16):  # The API provides up to 15 ingredients
+                ingredient = drink.get(f"strIngredient{i}")
+                measure = drink.get(f"strMeasure{i}")
+                if ingredient:
+                    ingredients.append(f"{measure.strip() if measure else ''} {ingredient.strip()}".strip())
+            ingredients_list = "\n".join(ingredients)
+
+            # Format the result
+            result = f"Name: {name}\n\nIngredients:\n{ingredients_list}\n\nInstructions:\n{instructions}"
+            return result
+        else:
+            return "No cocktail data found."
+    except Exception as e:
+        return f"Error: {e}"
+
+
 # GUI Functionality
 def fetch_data(api_choice):
     if api_choice == "Evil Insult":
@@ -41,6 +69,8 @@ def fetch_data(api_choice):
         result = get_affirmation()
     elif api_choice == "Advice":
         result = get_advice()
+    elif api_choice == "Cocktail":
+        result = get_cocktail()
     else:
         result = "Invalid API choice."
     
@@ -51,7 +81,7 @@ def fetch_data(api_choice):
 def main():
     # Initialize window
     window = tk.Tk()
-    window.title("Multi-API Fetcher")
+    window.title("Mood Mate")
     window.geometry("400x300")
     window.resizable(False, False)
 
@@ -68,6 +98,9 @@ def main():
 
     advice_btn = tk.Button(window, text="Advice Slip Generator", font=("Arial", 12), command=lambda: fetch_data("Advice"))
     advice_btn.pack(pady=5)
+
+    cocktail_btn = tk.Button(window, text="Cocktail Generator", font=("Arial", 12), command=lambda: fetch_data("Cocktail"))
+    cocktail_btn.pack(pady=5)
 
     # Exit Button
     exit_btn = tk.Button(window, text="Exit", font=("Arial", 12), fg="red", command=window.quit)
