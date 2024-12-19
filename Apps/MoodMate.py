@@ -2,6 +2,8 @@ import tkinter as tk
 from tkinter import messagebox
 from tkinter import simpledialog
 import requests
+from PIL import Image, ImageTk
+import io
 
 # Functions to fetch API data
 def get_evil_insult():
@@ -60,6 +62,23 @@ def get_uselessFact():
     except Exception as e:
         return f"Error: {e}"
 
+def get_breakingBad():
+    url = "https://api.breakingbadquotes.xyz/v1/quotes"
+    try:
+        # Fetch data from the API
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+        if data:  # Check if the list is not empty
+            quote = data[0]['quote']
+            author = data[0]['author']
+            # Format the quote and author nicely
+            return f'"{quote}"\n\n- {author}'
+        else:
+            return "No quotes available."
+    except Exception as e:
+        return f"Error: {e}"
+
 def get_cocktail():
     url = "https://www.thecocktaildb.com/api/json/v1/1/random.php"
     try:
@@ -111,6 +130,29 @@ def fetch_cocktail_by_ingredient():
         result = get_cocktail_by_ingredient(ingredient)
         messagebox.showinfo("Cocktail by Ingredient", result)
 
+def get_age_by_name(name):
+    url = f"https://api.agify.io?name={name}"
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+
+        # Check if the age key exists in the response
+        age = data.get("age")
+        if age is not None:
+            return f"The predicted age for the name '{name}' is {age}."
+        else:
+            return f"No age prediction available for the name '{name}'."
+    except Exception as e:
+        return f"Error: {e}"
+
+def fetch_age_by_name():
+    name = tk.simpledialog.askstring("Input Name", "Enter a name to predict age:")
+    if name:
+        result = get_age_by_name(name)
+        messagebox.showinfo("Age Prediction", result)
+    else:
+        messagebox.showinfo("Age Prediction", "No name provided.")
 
 # Updated Cocktail Function
 # Displays a random cocktail's name, ingredients, and instructions. If they type random
@@ -141,6 +183,42 @@ def cocktail_options():
     # Display the result
     messagebox.showinfo("Cocktail Generator", result)
 
+def get_random_dog_image():
+    url = "https://dog.ceo/api/breeds/image/random"
+    try:
+        # Fetch data from the API
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+        image_url = data.get("message")  # The image URL is in the "message" field
+
+        if image_url:
+            # Fetch the image
+            img_response = requests.get(image_url)
+            img_response.raise_for_status()
+            # Open the image using PIL
+            img_data = Image.open(io.BytesIO(img_response.content))
+            return img_data  # Return the PIL Image object
+        else:
+            return None
+    except Exception as e:
+        messagebox.showerror("Error", f"Could not fetch dog image: {e}")
+        return None
+
+def fetch_and_display_dog_image():
+    img_data = get_random_dog_image()
+    if img_data:
+        # Convert the PIL image to a format Tkinter can display
+        img = ImageTk.PhotoImage(img_data)
+        # Display the image in a new window
+        dog_window = tk.Toplevel()
+        dog_window.title("Random Dog Image")
+        dog_window.geometry("500x500")  # Adjust window size as needed
+        
+        img_label = tk.Label(dog_window, image=img)
+        img_label.image = img  # Keep a reference to avoid garbage collection
+        img_label.pack(padx=10, pady=10)
+
 # GUI Functionality
 def fetch_data(api_choice):
     if api_choice == "Evil Insult":
@@ -153,8 +231,14 @@ def fetch_data(api_choice):
         result = get_kanye()
     elif api_choice == "Random Useless Fact":
         result = get_uselessFact()
+    elif api_choice == "Breaking Bad Quote":
+        result = get_breakingBad()
     elif api_choice == "Cocktail":
         result = get_cocktail()
+    elif api_choice == "Age by Name":
+        result = fetch_age_by_name()
+    elif api_choice == "Dog Img":
+        result = fetch_and_display_dog_image()
     else:
         result = "Invalid API choice."
     
@@ -166,6 +250,7 @@ def main():
     # Initialize window
     window = tk.Tk()
     window.title("Mood Mate")
+    window.configure(background='black')
     window.geometry("400x600")
     window.resizable(False, False) # width, height
 
@@ -194,9 +279,21 @@ def main():
     uselessFact_btn = tk.Button(window, text="Random Useless Fact", font=("Arial", 12), command=lambda: fetch_data("Random Useless Fact"))
     uselessFact_btn.pack(pady=5)
 
+    #Random Useless Fact Btn
+    breakingbad_btn = tk.Button(window, text="Random Breaking Bad Quote", font=("Arial", 12), command=lambda: fetch_data("Breaking Bad Quote"))
+    breakingbad_btn.pack(pady=5)
+
     # Cocktail Btn
     cocktail_btn = tk.Button(window, text="Cocktail Generator", font=("Arial", 12), command=cocktail_options)
     cocktail_btn.pack(pady=5)
+
+    # Age by Name Btn
+    age_by_name_btn = tk.Button(window, text="Predict Age by Name", font=("Arial", 12), command=fetch_age_by_name)
+    age_by_name_btn.pack(pady=5)
+
+    # Random Dog Img Btn
+    dog_image_btn = tk.Button(window, text="Random Dog Image", font=("Arial", 12), command=fetch_and_display_dog_image)
+    dog_image_btn.pack(pady=5)
 
     # Exit Button
     exit_btn = tk.Button(window, text="Exit", font=("Arial", 12), fg="red", command=window.quit)
