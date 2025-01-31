@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# My scripts I want excluded
+api_key.py
+
 # C extensions
 *.so
 

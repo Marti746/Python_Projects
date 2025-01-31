@@ -304,3 +304,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# Other APIs to think about
+# https://v2.jokeapi.dev/?ref=freepublicapis.com
