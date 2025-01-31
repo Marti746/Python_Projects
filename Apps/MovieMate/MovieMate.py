@@ -34,6 +34,7 @@ class ShowTrackerApp:
         self.notebook.add(self.profile_page, text="Profile")
 
         # Create pages
+        self.sort_option = tk.StringVar(value="None")
         self.create_main_page()
         self.create_profile_page()
         self.update_profile_tabs()
@@ -47,50 +48,66 @@ class ShowTrackerApp:
                 title TEXT NOT NULL,
                 category TEXT NOT NULL,
                 score INTEGER,
-                poster_path TEXT
+                poster_path TEXT,
+                type TEXT
             )
         """)
         self.conn.commit()
 
     def create_main_page(self):
-        """Creates the main page layout."""
-        main_frame = tk.Frame(self.main_page)
-        main_frame.pack(fill=tk.BOTH, expand=True)
+        """Creates the main page layout and ensures the search bar remains visible."""
+        if not hasattr(self, "main_frame"):  # Ensure we don't re-create elements
+            self.main_frame = tk.Frame(self.main_page)
+            self.main_frame.pack(fill=tk.BOTH, expand=True)
 
-        title_label = tk.Label(main_frame, text="Show Tracker", font=("Arial", 24))
-        title_label.pack(pady=10)
+            title_label = tk.Label(self.main_frame, text="Show Tracker", font=("Arial", 24))
+            title_label.pack(pady=10)
 
-        search_frame = tk.Frame(main_frame)
-        search_frame.pack(pady=10)
+            # Search Bar Frame
+            self.search_frame = tk.Frame(self.main_frame)
+            self.search_frame.pack(pady=10)
 
-        search_label = tk.Label(search_frame, text="Search:")
-        search_label.pack(side=tk.LEFT, padx=5)
+            search_label = tk.Label(self.search_frame, text="Search:")
+            search_label.pack(side=tk.LEFT, padx=5)
 
-        self.search_entry = tk.Entry(search_frame, width=40)
-        self.search_entry.pack(side=tk.LEFT, padx=5)
+            self.search_entry = tk.Entry(self.search_frame, width=40)
+            self.search_entry.pack(side=tk.LEFT, padx=5)
 
-        search_button = tk.Button(search_frame, text="Search", command=self.search_show)
-        search_button.pack(side=tk.LEFT, padx=5)
+            # Search Button
+            search_button = tk.Button(self.search_frame, text="Search", command=self.search_show)
+            search_button.pack(side=tk.LEFT, padx=5)
 
-        # Display Recommended Shows Section
-        self.recommendations_frame = recommendations.display_recommended_shows(main_frame, self.add_to_db)
+            # Clear Button
+            clear_button = tk.Button(self.search_frame, text="Clear", command=self.clear_search)
+            clear_button.pack(side=tk.LEFT, padx=5)
 
-        # Search results with scrolling
-        self.results_canvas = tk.Canvas(main_frame)
-        self.results_scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=self.results_canvas.yview)
-        self.results_frame = tk.Frame(self.results_canvas)
+            # Scrollable Frame Setup
+            self.results_canvas = tk.Canvas(self.main_frame)
+            self.results_scrollbar = ttk.Scrollbar(self.main_frame, orient="vertical", command=self.results_canvas.yview)
+            self.results_frame = tk.Frame(self.results_canvas)
 
-        self.results_frame.bind("<Configure>", lambda e: self.results_canvas.configure(scrollregion=self.results_canvas.bbox("all")))
-        self.results_canvas.create_window((0, 0), window=self.results_frame, anchor="nw")
-        self.results_canvas.configure(yscrollcommand=self.results_scrollbar.set)
+            self.results_frame.bind("<Configure>", lambda e: self.results_canvas.configure(scrollregion=self.results_canvas.bbox("all")))
+            self.results_canvas.create_window((0, 0), window=self.results_frame, anchor="nw")
+            self.results_canvas.configure(yscrollcommand=self.results_scrollbar.set)
 
-        self.results_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        self.results_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+            self.results_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+            self.results_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+            self.display_recommendations()
 
     def create_profile_page(self):
         """Creates the profile page layout."""
         title_label = tk.Label(self.profile_page, text="Profile Page", font=("Arial", 24))
         title_label.pack(pady=10)
+
+        # Added the next 6 lines for sorting
+        sort_frame = tk.Frame(self.profile_page)
+        sort_frame.pack(pady=5)
+        tk.Label(sort_frame, text="Sort by:").pack(side=tk.LEFT, padx=5)
+
+        self.sort_dropdown = ttk.Combobox(sort_frame, textvariable=self.sort_option, values=["None", "Score (High to Low)", "Movies Only", "TV Shows Only"], state="readonly")
+        self.sort_dropdown.pack(side=tk.LEFT, padx=5)
+        self.sort_dropdown.bind("<<ComboboxSelected>>", lambda e: self.update_profile_tabs())
 
         self.profile_notebook = ttk.Notebook(self.profile_page)
         self.profile_notebook.pack(fill=tk.BOTH, expand=True)
@@ -120,33 +137,67 @@ class ShowTrackerApp:
 
         notebook.add(frame, text=label)
         return scrollable_frame
-
+    
     def update_profile_tabs(self):
-        """Updates the profile page with the latest data."""
         tabs = {"Completed": self.completed_tab, "Plan to Watch": self.plan_to_watch_tab, "Dropped": self.dropped_tab}
+        sort_option = self.sort_option.get()
         for category, tab in tabs.items():
             for widget in tab.winfo_children():
                 widget.destroy()
 
+            query = "SELECT id, title, score, poster_path, type FROM shows WHERE category=?"
+            params = (category,)
+
+            if sort_option == "Score (High to Low)":
+                query += " ORDER BY score DESC"
+            elif sort_option == "Movies Only":
+                query += " AND type='movie'"
+            elif sort_option == "TV Shows Only":
+                query += " AND type='tv'"
+            
             cursor = self.conn.cursor()
-            cursor.execute("SELECT id, title, score, poster_path FROM shows WHERE category=?", (category,))
+            cursor.execute(query, params)
             shows = cursor.fetchall()
 
-            for show_id, title, score, poster in shows:
+            for show_id, title, score, poster, show_type in shows:
                 frame = tk.Frame(tab, relief=tk.RIDGE, borderwidth=2, padx=5, pady=5)
                 frame.pack(fill=tk.X, pady=5)
 
                 tk.Label(frame, text=f"{title} (Score: {score if score else 'N/A'})", font=("Arial", 14)).pack(side=tk.LEFT)
                 edit_button = tk.Button(frame, text="Edit", command=lambda s_id=show_id: self.edit_show(s_id))
                 edit_button.pack(side=tk.RIGHT)
+    # def update_profile_tabs(self):
+    #     """Updates the profile page with the latest data."""
+    #     tabs = {"Completed": self.completed_tab, "Plan to Watch": self.plan_to_watch_tab, "Dropped": self.dropped_tab}
+    #     for category, tab in tabs.items():
+    #         for widget in tab.winfo_children():
+    #             widget.destroy()
+
+    #         cursor = self.conn.cursor()
+    #         cursor.execute("SELECT id, title, score, poster_path FROM shows WHERE category=?", (category,))
+    #         shows = cursor.fetchall()
+
+    #         for show_id, title, score, poster in shows:
+    #             frame = tk.Frame(tab, relief=tk.RIDGE, borderwidth=2, padx=5, pady=5)
+    #             frame.pack(fill=tk.X, pady=5)
+
+    #             tk.Label(frame, text=f"{title} (Score: {score if score else 'N/A'})", font=("Arial", 14)).pack(side=tk.LEFT)
+    #             edit_button = tk.Button(frame, text="Edit", command=lambda s_id=show_id: self.edit_show(s_id))
+    #             edit_button.pack(side=tk.RIGHT)
     
     def search_show(self):
-        """Handles the search functionality."""
+        """Handles search without removing the search bar."""
         query = self.search_entry.get()
+
         if not query:
-            messagebox.showwarning("Input Error", "Please enter a search term.")
+            self.clear_search()
             return
 
+        # Clear previous results but keep the search bar
+        for widget in self.results_frame.winfo_children():
+            widget.destroy()
+
+        # Fetch and display results
         url = f"{BASE_URL}/search/multi?api_key={API_KEY}&query={query}"
         response = requests.get(url)
 
@@ -154,7 +205,28 @@ class ShowTrackerApp:
             results = response.json().get('results', [])
             self.display_results(results)
         else:
-            messagebox.showerror("API Error", "Failed to fetch results.")
+            messagebox.showerror("API Error", "Failed to fetch results.")                           
+
+    def create_search_bar(self):
+        """Creates the search bar UI with a Clear button."""
+        self.search_frame = tk.Frame(self.main_page)
+        self.search_frame.pack(side=tk.TOP, fill=tk.X, pady=5)
+
+        self.search_entry = tk.Entry(self.search_frame, width=40)
+        self.search_entry.pack(side=tk.LEFT, padx=5)
+
+        search_button = tk.Button(self.search_frame, text="Search", command=self.search_show)
+        search_button.pack(side=tk.LEFT, padx=5)
+
+        clear_button = tk.Button(self.search_frame, text="Clear", command=self.create_main_page)
+        clear_button.pack(side=tk.LEFT, padx=5)
+
+    def clear_search(self):
+        """Clears search results and restores recommendations."""
+        self.search_entry.delete(0, tk.END)
+        for widget in self.results_frame.winfo_children():
+            widget.destroy()
+        self.display_recommendations()
 
     def display_results(self, results):
         """Displays the search results."""
@@ -169,6 +241,12 @@ class ShowTrackerApp:
             title = result.get("title") or result.get("name", "Unknown")
             release_date = result.get("release_date") or result.get("first_air_date", "N/A")
             poster_path = result.get("poster_path", "")
+
+            # Determine the type (movie or TV show)
+            if "media_type" in result:
+                show_type = "Movie" if result["media_type"] == "movie" else "TV Show"
+            else:
+                show_type = "Movie" if "title" in result else "TV Show"  # Heuristic check
 
             result_frame = tk.Frame(self.results_frame, relief=tk.RIDGE, borderwidth=2, padx=5, pady=5)
             result_frame.pack(fill=tk.X, pady=5)
@@ -194,14 +272,18 @@ class ShowTrackerApp:
             button_frame = tk.Frame(info_frame)
             button_frame.pack(anchor=tk.E)
 
-            tk.Button(button_frame, text="Add to Completed", command=lambda t=title, p=poster_path: self.add_to_db(t, "Completed", p)).pack(side=tk.LEFT, padx=5)
-            tk.Button(button_frame, text="Add to Plan to Watch", command=lambda t=title, p=poster_path: self.add_to_db(t, "Plan to Watch", p)).pack(side=tk.LEFT, padx=5)
-            tk.Button(button_frame, text="Add to Dropped", command=lambda t=title, p=poster_path: self.add_to_db(t, "Dropped", p)).pack(side=tk.LEFT, padx=5)
+            tk.Button(button_frame, text="Add to Completed", command=lambda t=title, p=poster_path, st=show_type: self.add_to_db(t, "Completed", p, st)).pack(side=tk.LEFT, padx=5)
+            tk.Button(button_frame, text="Add to Plan to Watch", command=lambda t=title, p=poster_path, st=show_type: self.add_to_db(t, "Plan to Watch", p, st)).pack(side=tk.LEFT, padx=5)
+            tk.Button(button_frame, text="Add to Dropped", command=lambda t=title, p=poster_path, st=show_type: self.add_to_db(t, "Dropped", p, st)).pack(side=tk.LEFT, padx=5)
 
-    def add_to_db(self, title, category, poster_path):
+    def display_recommendations(self):
+        """Displays recommended shows when there is no search query."""
+        self.recommendations_frame = recommendations.display_recommended_shows(self.results_frame, self.add_to_db)
+
+    def add_to_db(self, title, category, poster_path, show_type):
         """Adds a title to the database."""
         cursor = self.conn.cursor()
-        cursor.execute("INSERT INTO shows (title, category, poster_path) VALUES (?, ?, ?)", (title, category, poster_path))
+        cursor.execute("INSERT INTO shows (title, category, poster_path, type) VALUES (?, ?, ?, ?)", (title, category, poster_path, show_type))
         self.conn.commit()
         messagebox.showinfo("Success", f"Added '{title}' to {category}.")
         self.update_profile_tabs()

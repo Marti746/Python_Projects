@@ -34,6 +34,12 @@ def display_recommended_shows(parent, add_to_db):
         poster_path = show.get("poster_path")
         full_poster_url = f"{IMAGE_BASE_URL}{poster_path}" if poster_path else None
 
+        # Determine the type (movie or TV show)
+        if "media_type" in show:
+            show_type = "Movie" if show["media_type"] == "movie" else "TV Show"
+        else:
+            show_type = "Movie" if "title" in show else "TV Show"  # Heuristic check    
+
         frame = tk.Frame(recommendations_frame, pady=5)
         frame.pack(fill="x", padx=10)
 
